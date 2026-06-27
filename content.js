@@ -52,10 +52,13 @@
     }
     if (cues.length === 0) {
       showToast("YouTube-Transkriptpanel wird geöffnet ...");
-      cues = await fetchTranscriptCuesFromPanel();
+      cues = await fetchTranscriptCuesFromPanel({ allowManualRetryHint: !isGeminiTrack(track) });
     }
     const body = cuesToPlainText(cues);
     if (!body.trim()) {
+      if (isGeminiTrack(track)) {
+        throw new Error("YouTube gibt dieses neue Gemini-Auto-Transkript aktuell nicht an Browser-Extensions frei. Auch YouTubes eigenes Transkriptpanel liefert keine Segmente. Für dieses Video ist der TXT-Export rein clientseitig derzeit nicht möglich.");
+      }
       throw new Error("YouTube hat das Transkript nicht direkt freigegeben. Oeffne im Videotext einmal 'Transkript anzeigen' und klicke dann erneut auf das Extension-Icon.");
     }
 
@@ -415,6 +418,14 @@
     return url.toString();
   }
 
+  function isGeminiTrack(track) {
+    try {
+      return new URL(track.baseUrl).searchParams.get("variant") === "gemini";
+    } catch {
+      return false;
+    }
+  }
+
   function parseTranscriptPayload(text, requestedFormat) {
     const trimmed = text.trim();
     if (!trimmed) return [];
@@ -530,7 +541,7 @@
     return merged;
   }
 
-  async function fetchTranscriptCuesFromPanel() {
+  async function fetchTranscriptCuesFromPanel({ allowManualRetryHint } = { allowManualRetryHint: true }) {
     const existing = scrapeVisibleTranscript();
     if (existing.length > 0) return existing;
 
@@ -543,7 +554,7 @@
 
     await clickElement(button);
     const cues = await waitForTranscriptSegments(12000);
-    if (cues.length === 0) {
+    if (cues.length === 0 && allowManualRetryHint) {
       showToast("YouTube blockiert das automatische Oeffnen. Bitte 'Transkript anzeigen' manuell anklicken und danach das Extension-Icon erneut klicken.");
     }
     return cues;

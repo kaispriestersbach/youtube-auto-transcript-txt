@@ -44,9 +44,9 @@ The transcript text is not sent to any non-YouTube service.
 
 ## Known Limitation
 
-YouTube does not provide a stable public transcript API for browser extensions. Some newer auto transcripts, especially `variant=gemini` tracks, can expose a track but return empty timedtext responses. In those cases the extension shows an instruction instead of downloading an empty file.
+YouTube does not provide a stable public transcript API for browser extensions. Some newer auto transcripts, especially `variant=gemini` tracks, can expose a track but return empty timedtext responses. In those cases the extension does not download an empty file.
 
-If YouTube's own transcript panel is already open and visible, the extension can also read visible transcript segment text from the page.
+If YouTube's own transcript panel contains visible segments, the extension can also read visible transcript segment text from the page. If YouTube's transcript panel is also empty or returns `FAILED_PRECONDITION`, a purely client-side TXT export is currently not possible for that video.
 
 ## Development Checks
 
