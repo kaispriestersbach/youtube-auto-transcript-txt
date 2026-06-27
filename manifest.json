@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "YouTube Auto Transcript TXT",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "Downloads YouTube auto-generated transcripts as local TXT files. No backend, no tracking.",
   "permissions": [
     "activeTab",

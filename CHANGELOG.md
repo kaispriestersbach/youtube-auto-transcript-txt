@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.9
+
+- Add a client-side fallback that replays YouTube `api/timedtext` URLs created by the player during caption initialization.
+- Keep permissions unchanged while covering player-generated timedtext URLs that contain runtime-only parameters such as `pot`, `xorb`, `xobt`, or `xovt`.
+
 ## 0.1.8
 
 - Detect newer `variant=gemini` auto-transcript tracks that YouTube exposes but does not provide to browser extensions.

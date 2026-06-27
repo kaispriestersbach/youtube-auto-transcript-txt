@@ -18,7 +18,8 @@ The extension is intentionally narrow:
 3. The extension briefly primes YouTube's own captions module.
 4. It reads the current page's caption track metadata.
 5. It fetches transcript data from YouTube in the current browser session.
-6. It creates a local `.txt` file with a Blob download.
+6. If YouTube's player created a richer timedtext URL for captions, the extension retries that exact URL locally.
+7. It creates a local `.txt` file with a Blob download.
 
 The transcript text is not sent to any non-YouTube service.
 
@@ -46,7 +47,7 @@ The transcript text is not sent to any non-YouTube service.
 
 YouTube does not provide a stable public transcript API for browser extensions. Some newer auto transcripts, especially `variant=gemini` tracks, can expose a track but return empty timedtext responses. In those cases the extension does not download an empty file.
 
-If YouTube's own transcript panel contains visible segments, the extension can also read visible transcript segment text from the page. If YouTube's transcript panel is also empty or returns `FAILED_PRECONDITION`, a purely client-side TXT export is currently not possible for that video.
+Version 0.1.9 also tries to reuse timedtext URLs that the YouTube player itself created during caption initialization. If YouTube's own player request or transcript panel contains visible/readable segments, the extension can read those locally. If YouTube's player request, transcript panel, and `get_transcript` endpoint all return no segments or `FAILED_PRECONDITION`, a purely client-side TXT export is currently not possible for that video.
 
 ## Development Checks
 

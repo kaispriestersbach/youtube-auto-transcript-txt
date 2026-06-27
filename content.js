@@ -48,6 +48,9 @@
 
     let cues = await fetchTranscriptCues(track);
     if (cues.length === 0) {
+      cues = await fetchTranscriptCuesFromPlayerRequests(videoId, track);
+    }
+    if (cues.length === 0) {
       cues = await fetchTranscriptCuesFromInnertube(videoId);
     }
     if (cues.length === 0) {
@@ -57,7 +60,7 @@
     const body = cuesToPlainText(cues);
     if (!body.trim()) {
       if (isGeminiTrack(track)) {
-        throw new Error("YouTube gibt dieses neue Gemini-Auto-Transkript aktuell nicht an Browser-Extensions frei. Auch YouTubes eigenes Transkriptpanel liefert keine Segmente. Für dieses Video ist der TXT-Export rein clientseitig derzeit nicht möglich.");
+        throw new Error("YouTube liefert in diesem Tab keine lesbaren Segmente ueber Standard-Timedtext, Player-Timedtext, get_transcript oder das Transkriptpanel. Fuer dieses Video ist der TXT-Export ohne Backend oder externen Dienst rein clientseitig derzeit nicht moeglich.");
       }
       throw new Error("YouTube hat das Transkript nicht direkt freigegeben. Oeffne im Videotext einmal 'Transkript anzeigen' und klicke dann erneut auf das Extension-Icon.");
     }
@@ -407,6 +410,70 @@
       console.warn("[YouTube Auto Transcript TXT] timedtext fallback needed:", lastError);
     }
     return [];
+  }
+
+  async function fetchTranscriptCuesFromPlayerRequests(videoId, track) {
+    const urls = collectPlayerTimedtextUrls(videoId, track);
+    if (urls.length === 0) return [];
+
+    for (const url of urls) {
+      try {
+        const requestedFormat = new URL(url).searchParams.get("fmt") || "";
+        const response = await fetch(url, { credentials: "include" });
+        if (!response.ok) continue;
+
+        const text = await response.text();
+        const cues = parseTranscriptPayload(text, requestedFormat);
+        if (cues.length > 0) return cues;
+      } catch (error) {
+        console.warn("[YouTube Auto Transcript TXT] player timedtext replay failed", error);
+      }
+    }
+
+    return [];
+  }
+
+  function collectPlayerTimedtextUrls(videoId, track) {
+    const entries = performance
+      .getEntriesByType("resource")
+      .filter((entry) => typeof entry.name === "string" && entry.name.includes("/api/timedtext"))
+      .sort((a, b) => b.startTime - a.startTime);
+    const urls = [];
+
+    for (const entry of entries) {
+      let url;
+      try {
+        url = new URL(entry.name);
+      } catch {
+        continue;
+      }
+
+      if (!isMatchingPlayerTimedtextUrl(url, videoId, track)) continue;
+
+      const format = url.searchParams.get("fmt") || "";
+      for (const candidateFormat of uniqueValues([format, "json3", "srv3", "vtt", ""])) {
+        const candidate = new URL(url);
+        if (candidateFormat) candidate.searchParams.set("fmt", candidateFormat);
+        else candidate.searchParams.delete("fmt");
+        urls.push(candidate.toString());
+      }
+    }
+
+    return uniqueValues(urls);
+  }
+
+  function isMatchingPlayerTimedtextUrl(url, videoId, track) {
+    if (url.hostname !== "www.youtube.com" && url.hostname !== location.hostname) return false;
+    if (!url.pathname.endsWith("/api/timedtext")) return false;
+    if (url.searchParams.get("v") !== videoId) return false;
+
+    const language = url.searchParams.get("lang");
+    if (track.languageCode && language && language !== track.languageCode) return false;
+
+    const kind = url.searchParams.get("kind");
+    if (track.kind && kind && kind !== track.kind) return false;
+
+    return true;
   }
 
   function buildCaptionUrl(track, format) {
